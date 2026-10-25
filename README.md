@@ -8,7 +8,7 @@ When you want a better price than the current one, you place a limit order and w
 
 TickTock does **not** predict price direction. It predicts the distribution of the waiting time.
 
-## Quick start
+## Quick start here
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
