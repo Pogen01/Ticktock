@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TickTock</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 13V8.5M12 13l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 2.5h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </span>
+      <div>
+        <h1>TickTock</h1>
+        <p class="tag">How long until your limit order fills?</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-view="forecast" role="tab">Forecast</button>
+      <button class="tab" data-view="reality" role="tab">Models vs reality</button>
+      <button class="tab" data-view="scorecard" role="tab">Model scorecard</button>
+      <button class="tab" data-view="about" role="tab">How it works</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="view-forecast" class="view">
+      <form id="controls" class="card controls" autocomplete="off">
+        <label>Stock
+          <select id="ticker"></select>
+        </label>
+        <div class="field">
+          <span class="lbl">Side</span>
+          <div class="seg" role="radiogroup">
+            <button type="button" class="seg-btn active" data-side="buy">Buy lower</button>
+            <button type="button" class="seg-btn" data-side="sell">Sell higher</button>
+          </div>
+        </div>
+        <label>Desired price ($)
+          <input id="target" type="number" step="0.01" min="0.01">
+        </label>
+        <label class="slider-wrap">Distance from last close: <b id="dist-label">2.0%</b>
+          <input id="dist" type="range" min="0.1" max="12" step="0.1" value="2">
+        </label>
+        <label class="date-wrap">Replay date (order placed at close)
+          <div class="date-row">
+            <button type="button" id="prev-day" class="icon-btn" aria-label="Previous trading day">&#8249;</button>
+            <input id="asof" type="date">
+            <button type="button" id="next-day" class="icon-btn" aria-label="Next trading day">&#8250;</button>
+            <button type="button" id="play" class="icon-btn wide" aria-label="Play replay">&#9654; Replay</button>
+          </div>
+        </label>
+        <label>Model
+          <select id="model"></select>
+        </label>
+      </form>
+
+      <div id="error" class="error" hidden></div>
+
+      <div class="grid">
+        <div class="card hero">
+          <div class="hero-head">
+            <span id="hero-ticker" class="pill"></span>
+            <span id="hero-ref" class="muted"></span>
+          </div>
+          <div class="hero-label">Expected wait (80% range)</div>
+          <div id="hero-range" class="hero-num">–</div>
+          <div id="hero-sub" class="muted"></div>
+          <p id="briefing" class="briefing"></p>
+          <div class="tiles" id="tiles"></div>
+          <div id="model-acc" class="model-acc"></div>
+        </div>
+
+        <div class="card gauges">
+          <h3>Market traffic right now</h3>
+          <div class="gauge" id="traffic-gauge"></div>
+          <div class="gauge" id="stress-gauge"></div>
+          <div id="actual" class="actual"></div>
+        </div>
+
+        <div class="card span2">
+          <div class="card-head">
+            <h3>Chance the order has filled, day by day</h3>
+            <span class="muted small">trading days after the order is placed</span>
+          </div>
+          <div id="cdf-chart" class="chart"></div>
+        </div>
+
+        <div class="card span2">
+          <div class="card-head">
+            <h3>Trade-off: better price, longer wait</h3>
+            <span class="muted small">median wait and 80% range for each limit price</span>
+          </div>
+          <div id="tradeoff-chart" class="chart"></div>
+        </div>
+
+        <div class="card span2">
+          <div class="card-head">
+            <h3>Price around the replay date</h3>
+            <label class="toggle small"><input type="checkbox" id="reveal"> Reveal what happened next</label>
+          </div>
+          <div id="price-chart" class="chart"></div>
+        </div>
+
+        <div class="card">
+          <h3>What drives this forecast</h3>
+          <p class="muted small">Effect on the typical wait versus an average order (Weibull model).</p>
+          <div id="drivers"></div>
+        </div>
+
+        <div class="card">
+          <h3>Company risk factors</h3>
+          <div id="risk"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="view-reality" class="view" hidden>
+      <form id="cmp-controls" class="card controls cmp-controls" autocomplete="off">
+        <label>Stock
+          <select id="cmp-ticker"></select>
+        </label>
+        <label>Side
+          <select id="cmp-side">
+            <option value="ALL">Buy and sell</option>
+            <option value="buy">Buy below the price</option>
+            <option value="sell">Sell above the price</option>
+          </select>
+        </label>
+        <label>Limit distance
+          <select id="cmp-dist"></select>
+        </label>
+        <p class="muted small cmp-note" id="cmp-note"></p>
+      </form>
+
+      <div class="grid">
+        <div class="card span2">
+          <div class="card-head">
+            <h3>Fill curve: predicted by each model vs what really happened</h3>
+            <span class="muted small" id="cmp-n"></span>
+          </div>
+          <p class="muted small">Share of orders filled by each trading day after they were placed. The thick line is the real outcome; the thin lines are the models' average predictions for the same orders.</p>
+          <div class="legend" id="cmp-legend"></div>
+          <div id="cmp-curve" class="chart"></div>
+        </div>
+
+        <div class="card span2">
+          <div class="card-head">
+            <h3 id="cmp-tl-title">Month by month: chance of filling within 10 trading days</h3>
+            <span class="muted small">predicted (lines) vs real (thick line)</span>
+          </div>
+          <div id="cmp-timeline" class="chart"></div>
+          <div id="cmp-price" class="chart"></div>
+        </div>
+
+        <div class="card span2">
+          <h3>How far off is each model?</h3>
+          <p class="muted small">Average gap between the predicted and real curves, in percentage points (pts). Smaller is better. A 2-pt gap means the model said, for example, 58% where 60% of orders really filled.</p>
+          <div class="table-wrap"><table id="cmp-table" class="tbl"></table></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-scorecard" class="view" hidden>
+      <div class="card">
+        <h3>How accurate is each model?</h3>
+        <p class="muted" id="acc-intro"></p>
+        <div id="acc-cards" class="acc-cards"></div>
+        <p class="muted small" id="acc-foot"></p>
+      </div>
+      <div class="card">
+        <h3 id="score-test-title">Full scorecard on the test period (held out, scored once)</h3>
+        <p class="muted">Accuracy is the share of correct yes/no calls on "fills within 1 / 5 / 10 / 20 days". Range hit is the share of real waits that landed inside the predicted range: the target is 50% and 80%, so closer to the target is better (higher is not automatically better). Lower Brier is better; higher censored log-likelihood is better.</p>
+        <div class="table-wrap"><table id="score-test" class="tbl"></table></div>
+      </div>
+      <div class="card">
+        <h3 id="score-tune-title">Tune set, used for model choices</h3>
+        <div class="table-wrap"><table id="score-tune" class="tbl"></table></div>
+      </div>
+    </section>
+
+    <section id="view-about" class="view" hidden>
+      <div class="card prose">
+        <h3>What TickTock does</h3>
+        <p>When you want a better price than the current one you place a <b>limit order</b> (an order that only trades at your price or better) and wait. TickTock forecasts <b>how long that wait is likely to be</b>: a range, the chance of filling within a few days, and the chance it doesn't fill at all within 40 trading days.</p>
+        <p><b>We do not predict price direction.</b> We predict the distribution of the waiting time.</p>
+        <h3>How a "fill" is counted</h3>
+        <p>An order is placed at the day's close. A buy at limit L counts as filled on the first later session whose low is at least one cent below L (sell: high one cent above L). Just touching the price is not enough, because other orders were queued there first.</p>
+        <h3>Models</h3>
+        <ul>
+          <li><b>History (Kaplan–Meier):</b> past waits for orders of similar distance and traffic.</li>
+          <li><b>Random-walk theory:</b> textbook first-passage maths using distance and recent volatility.</li>
+          <li><b>Theory + traffic:</b> the same formula with volatility rescaled by traffic, market stress, calendar and risk features.</li>
+          <li><b>Weibull survival:</b> a fitted waiting-time curve using every feature, including the company risk factors from the 2024/2025 sheet.</li>
+        </ul>
+        <h3>Risk factors as variables</h3>
+        <p>Each company's risk text is mapped to 11 themes (regulatory, trade &amp; geopolitics, supply chain, AI shift, rates &amp; macro, consumer demand, litigation, competition, M&amp;A, commodities, operational). Flags, counts, "macro exposure" and their interaction with market stress feed the models. 2024 text applies to 2024 orders and 2025 text to 2025 and 2026 orders. The sheet has no text before 2024, so earlier orders use the 2024 text as a fixed company profile.</p>
+        <h3>How accuracy is measured</h3>
+        <p>Models are trained on orders placed from Nov 2006 to Dec 2019, tuned on 2020–2021 (including the COVID crash) and scored once on Jan 2022 – Oct 2026, which none of them saw. For each test order we ask four yes/no questions: does it fill within 1, 5, 10 and 20 trading days? A model says "yes" when its probability is 50% or more. <b>Accuracy</b> is the share of those calls that were right. The <b>baseline</b> always gives the most common answer, so it shows how much the model adds. We also report <b>range hit</b>: how often the real wait landed inside the predicted 80% range (it should be about 80%).</p>
+        <p class="muted">Data: 20 years of daily bars (Oct 2006 – Oct 2026) for the 20 largest US companies at the start of 2024. META, TSLA, V and AVGO start at their listing dates. Waits are in trading days.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">Research prototype, not financial advice.</footer>
+  <div id="tooltip" class="tooltip" role="status" hidden></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

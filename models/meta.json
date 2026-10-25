@@ -1,0 +1,29 @@
+{
+ "traffic_edges": [
+  -0.1846171269005661,
+  0.0527915257779956
+ ],
+ "horizon": 40,
+ "trained_through": "2021-11-04",
+ "first_test_date": "2022-01-03",
+ "last_test_date": "2026-10-22",
+ "split_labels": {
+  "train": "Nov 2006 - Dec 2019",
+  "tune": "2020 - 2021 (incl. the COVID crash)",
+  "test": "Jan 2022 - Oct 2026"
+ },
+ "n_orders": {
+  "train": 741432,
+  "test": 289440,
+  "tune": 121200,
+  "purged": 9360
+ },
+ "models": [
+  "kaplan_meier",
+  "ig_theory",
+  "ig_traffic",
+  "weibull_no_risk",
+  "weibull_aft"
+ ],
+ "default_model": "weibull_aft"
+}
